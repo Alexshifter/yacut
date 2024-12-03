@@ -1,7 +1,9 @@
 import random
+import re
 import string
 
-from flask import abort, flash, redirect, render_template, url_for
+from flask import (abort, flash, redirect,
+                   render_template, url_for)
 
 from . import app, db
 from .forms import LinkForm
@@ -11,7 +13,6 @@ from .models import URLMap
 def short_id_generator():
     symbols = string.digits + string.ascii_letters
     while True:
-        """Генерируем ссылку и проверяем есть ли дубликат в базе."""
         short = ''.join(random.choice(symbols) for _ in range(6))
         if not check_exist_short_dublicate(short):
             return short
@@ -26,6 +27,10 @@ def create_obj_for_db(original_link, short_id):
                   short=short_id)
 
 
+def check_custom_id(short_id):
+    return re.fullmatch(r'[A-Za-z0-9]{1,16}$', short_id)
+
+
 @app.route('/', methods=['GET', 'POST'])
 def index_view():
     form = LinkForm()
@@ -34,12 +39,16 @@ def index_view():
             short = short_id_generator()
         else:
             short = form.custom_id.data
+            if not check_custom_id(short):
+                flash('В короткой ссылке можно использовать только строчные '
+                      'и прописные латинские буквы и цифры 0-9.')
+                return render_template('index.html',
+                                       form=form)
             if check_exist_short_dublicate(short):
                 flash('Предложенный вариант короткой ссылки уже существует.')
                 return render_template('index.html',
                                        form=form)
         url_map = create_obj_for_db(form.original_link.data, short)
-        
         db.session.add(url_map)
         db.session.commit()
         flash('Ваша новая ссылка готова:')

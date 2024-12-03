@@ -1,8 +1,9 @@
 from datetime import datetime
 
+from flask import url_for
+
 from . import db
 
-from flask import url_for
 
 class URLMap(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -11,12 +12,11 @@ class URLMap(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
 
     def to_dict(self):
-        return dict( short_link=url_for(
+        return dict(short_link=url_for(
             'redirect_view',
             short_id=self.short,
-            _external=True), 
+            _external=True),
             url=self.original
-           
         )
 
     def from_dict(self, data):
