@@ -2,6 +2,7 @@ from flask import jsonify, render_template
 
 from . import app, db
 
+
 class InvalidAPIUsage(Exception):
     status_code = 400
     def __init__(self, message, status_code=None):
