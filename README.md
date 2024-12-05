@@ -22,8 +22,8 @@ source venv/scripts/activate
 ```
 python -m pip install --upgrade pip
 ```
-pip install -r requirements.txt
 ```
+pip install -r requirements.txt
 ```
 Создайте файл с переменными окружения `.env`. Укажите в файле значения локальных переменных, представленных в образце `.env.example`
 ```

@@ -1,30 +1,28 @@
 import random
 import re
 import string
+from http import HTTPStatus
+
 
 from flask import (abort, flash, redirect,
                    render_template, url_for)
+from sqlalchemy import exists
 
 from . import app, db
 from .forms import LinkForm
 from .models import URLMap
 
 
-def short_id_generator():
-    symbols = string.digits + string.ascii_letters
+def generate_short_id():
+    symbols = f'{string.digits}{string.ascii_letters}'
     while True:
         short = ''.join(random.choice(symbols) for _ in range(6))
-        if not check_exist_short_dublicate(short):
+        if not find_short_duplicate(short):
             return short
 
 
-def check_exist_short_dublicate(short):
-    return (URLMap.query.filter_by(short=short).first())
-
-
-def create_obj_for_db(original_link, short_id):
-    return URLMap(original=original_link,
-                  short=short_id)
+def find_short_duplicate(short):
+    return db.session.query(exists().where(URLMap.short == short)).scalar()
 
 
 def check_custom_id(short_id):
@@ -35,20 +33,19 @@ def check_custom_id(short_id):
 def index_view():
     form = LinkForm()
     if form.validate_on_submit():
-        if not form.custom_id.data:
-            short = short_id_generator()
-        else:
+        if form.custom_id.data:
             short = form.custom_id.data
             if not check_custom_id(short):
                 flash('В короткой ссылке можно использовать только строчные '
-                      'и прописные латинские буквы и цифры 0-9.')
-                return render_template('index.html',
-                                       form=form)
-            if check_exist_short_dublicate(short):
+                      'и прописные латинские буквы и цифры 0-9. ')
+                return render_template('index.html', form=form)
+            if find_short_duplicate(short):
                 flash('Предложенный вариант короткой ссылки уже существует.')
-                return render_template('index.html',
-                                       form=form)
-        url_map = create_obj_for_db(form.original_link.data, short)
+                return render_template('index.html', form=form)
+        if not form.custom_id.data:
+            short = generate_short_id()
+        url_map = URLMap(original=form.original_link.data,
+                         short=short)
         db.session.add(url_map)
         db.session.commit()
         flash('Ваша новая ссылка готова:')
@@ -65,4 +62,4 @@ def redirect_view(short_id):
     obj = URLMap.query.filter_by(short=short_id).first()
     if obj is not None:
         return redirect(obj.original)
-    abort(404)
+    abort(HTTPStatus.NOT_FOUND)
